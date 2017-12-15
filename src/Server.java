@@ -1,69 +1,107 @@
+
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
-import java.rmi.Naming;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
-import java.io.*;
-import java.util.*;
+import java.rmi.*;
+import java.rmi.server.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.locks.Condition;
+import java.util.concurrent.locks.Lock;
+import java.util.concurrent.locks.ReentrantLock;
 
-public class Server {
-    public int port;
+public class Server extends UnicastRemoteObject implements ManageFile {
+    List<String> names = new ArrayList<String>();
+    List<String> source = new ArrayList<String>();
+    private String name;
     ServerSocket server;
     List<Socket> lClients;
+    int port;
+    Socket client;
     List<ObjectOutputStream> lOutput;
-    private static List<StoredFiles> files;
-    String serverHost = "localhost";
+    Lock lock =  new ReentrantLock();
 
     Server(int port) throws IOException {
         this.port = port;
         lClients = new ArrayList<Socket>();
         server = new ServerSocket(port);
         lOutput = new ArrayList<ObjectOutputStream>();
-        files = new ArrayList<>();
-
+        names = new ArrayList<String>();
+        source = new ArrayList<String>();
 
 
     }
 
     public void runServer() throws IOException {
 
-        //files.add(new StoredFiles("hey ya", "C:\\heyya.mp3"));
-        //files.add(new StoredFiles("you & me", "C:\\you&me.mp3"));
-
         while (true) {
             System.out.println("Server waiting: ");
-            Socket client = server.accept();
+            client = server.accept();
             lClients.add(client);
 
             InputStream fromClient = client.getInputStream();
-
             OutputStream toClient = client.getOutputStream();
             ObjectOutputStream objectToClient = new ObjectOutputStream(toClient);
-            ObjectInputStream objectFromServer = new ObjectInputStream(fromClient);
-            //StoredFiles [] test = new StoredFiles[]{new StoredFiles("Hey Ya", "c://heyya.mp3")};
             lOutput.add(objectToClient);
-            ManageFileIMPL obj = new ManageFileIMPL("AddServer");
-            System.out.println("here3");
-            Naming.rebind("rmi://" + serverHost + "/ArithServer", obj);
-            System.out.println("Server in Registry");
-            //objectToClient.close();
-            //System.out.println("CR3");
+            ObjectInputStream objectFromServer = new ObjectInputStream(fromClient);
 
-            Thread t = new Thread(new ClientInput(client, lClients, lOutput, objectFromServer));
+            Thread t = new Thread(new ClientInput(client, lClients, lOutput, objectFromServer, names, source));
             t.start();
+
         }
     }
 
+    //main method
     public static void main(String[] args) {
-
         try {
             int port = 1234;
             Server server = new Server(port);
-            server.runServer();
-            //ExecutorService pool = Executors.newFixedThreadPool(10);
+            Naming.rebind("Files", server);
 
-        } catch (Exception e) {
-            System.out.println("Error main server: " + e.getMessage());
+            // Server server2 = new Server(port);
+            server.runServer();
+        } catch(java.net.MalformedURLException e) {
+            System.out.println("Malformed URL of Server name: "+e.toString());
         }
+        catch(RemoteException e) {
+            System.out.println("Communication error: "+e.toString());
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
+    public synchronized void add(String obj) throws ClassNotFoundException, IOException {
+        //String name = (String) obj.readObject();
+        names.add(obj);
+        //source.add(src);
+        System.out.println("This file has been added: " + obj);
+
+    }
+
+    public synchronized void deleteFile(String name) throws RemoteException {
+        this.lock.lock();
+        int i = names.indexOf(name);
+        names.remove(i);
+        this.lock.unlock();
+        //source.remove(i);
+        System.out.println("This file has been removed: " + name);
+
+    }
+
+    @Override
+    public void requestandsleep(String name) {
+
+        Thread x = new Thread(new RequestFileAndSleep(client, name, names, lock));
+        x.start();
+
+    }
+
+    @Override
+    public void requestanddelete (String name) {
+
+        Thread x = new Thread(new RequestFileAndDelete(client, name, names, source, lock));
+        x.start();
+
     }
 }

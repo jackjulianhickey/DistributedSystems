@@ -1,7 +1,12 @@
 
-import java.rmi.*;
+import java.io.IOException;
+import java.rmi.Remote;
+import java.rmi.RemoteException;
 
-public interface ManageFile extends java.rmi.Remote{
-    public void add (String name, String src) throws java.rmi.RemoteException;
-    public void deleteFile(String name)throws java.rmi.RemoteException;
+public interface ManageFile extends Remote{
+    public void add (String obj) throws IOException, ClassNotFoundException;
+    public void deleteFile(String name) throws RemoteException;
+    public void requestandsleep(String name)throws RemoteException;
+    public void requestanddelete(String name)throws RemoteException;
+
 }

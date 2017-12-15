@@ -8,27 +8,17 @@ public class ClientInput implements Runnable {
     List<Socket> lClients;
     InputStream fromClient;
     ObjectInputStream objectFromClient;
+    List<String> names;
+    List<String> src;
+    List<ObjectOutputStream> lOutput;
 
-    ClientInput(Socket client, List<Socket> lClients) throws IOException {
+    ClientInput(Socket client, List<Socket> lClients, List<ObjectOutputStream> lOutput,ObjectInputStream objectFromClient, List<String> names, List<String> src) throws IOException{
         this.client = client;
         this.lClients = lClients;
-
-        fromClient = client.getInputStream();
-        //InputStream fromClient = client.getInputStream();
-
-        OutputStream toClient = client.getOutputStream();
-        ObjectOutputStream objectToClient = new ObjectOutputStream(client.getOutputStream());
-
-        objectFromClient = new ObjectInputStream(fromClient);
-
-    }
-
-    List<ObjectOutputStream> lOutput;
-    ClientInput(Socket client, List<Socket> lClients, List<ObjectOutputStream> lOutput,ObjectInputStream objectFromClient) throws IOException{
-    this.client = client;
-		this.lClients = lClients;
-		this.lOutput = lOutput;
-		this.objectFromClient = objectFromClient;
+        this.lOutput = lOutput;
+        this.objectFromClient = objectFromClient;
+        this.names = names;
+        this.src = src;
     }
 
     public void run() {
@@ -39,8 +29,11 @@ public class ClientInput implements Runnable {
                 if (this.objectFromClient == null) {
                     System.out.println("NULL");
                 }
-                String s = (String) objectFromClient.readObject();
-                System.out.println("Object received -- "+s);
+                Files s = (Files) objectFromClient.readObject();
+                names.add(s.getName().toString());
+                src.add(s.getSrc().toString());
+
+                System.out.println("Object received -- "+s.getName().toString());
                 for(int i=0;i<this.lClients.size(); i++) {
                     Socket c = this.lClients.get(i);
                     if(c != client) {
@@ -49,17 +42,6 @@ public class ClientInput implements Runnable {
                         objectToClient.flush();
                     }
                 }
-				/*
-				for( Socket c : this.lClients ) {
-					if(c != client) {
-						OutputStream toClient = c.getOutputStream();
-						ObjectOutputStream objectToClient = new ObjectOutputStream(toClient);
-						objectToClient.writeObject(s);
-						objectToClient.flush();
-						System.out.println("Sending to client: "+s);
-					}
-				}
-				*/
             }
         } catch( Exception e) {
             System.out.println("Error run ClientReading: "+e.getMessage());
@@ -67,5 +49,5 @@ public class ClientInput implements Runnable {
     }
 
 
-    }
+}
 

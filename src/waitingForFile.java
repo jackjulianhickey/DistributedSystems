@@ -1,6 +1,6 @@
-import java.net.*;
-import java.io.*;
-import java.util.*;
+import java.io.IOException;
+import java.io.ObjectInputStream;
+import java.net.Socket;
 
 public class waitingForFile implements Runnable {
     Socket server;
@@ -8,23 +8,20 @@ public class waitingForFile implements Runnable {
 
     waitingForFile(ObjectInputStream objectFromServer) throws IOException {
         this.server = server;
-
-		/*
-		InputStream fromServer = this.server.getInputStream();
-		System.out.println("ss2: "+server.getInetAddress());
-		this.objectFromServer = new ObjectInputStream(fromServer);
-			*/
         this.objectFromServer = objectFromServer;
     }
 
+    @Override
     public void run() {
+
         try {
             while(true) {
-                String msg = (String) objectFromServer.readObject();
-                System.out.println("\nClient: "+msg);
+                Files msg = (Files) objectFromServer.readObject();
+                System.out.println("\nClient: "+msg.getName().toString());
             }
         } catch(Exception e) {
             System.out.println("Error run ClientWaitMessage: "+e.getMessage());
         }
+
     }
 }
